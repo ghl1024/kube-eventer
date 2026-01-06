@@ -296,15 +296,15 @@ func newProducer(c *Config) (*sls_producer.Producer, *utils.AKInfo, error) {
 	}
 
 	// get ak info
-	akInfo, err := utils.ParseAKInfoFromConfigPath()
-	if err != nil {
-		akInfo = &utils.AKInfo{}
-		if len(c.accessKeyId) > 0 && len(c.accessKeySecret) > 0 {
-			akInfo = &utils.AKInfo{}
-			akInfo.AccessKeyId = c.accessKeyId
-			akInfo.AccessKeySecret = c.accessKeySecret
-			akInfo.SecurityToken = ""
-		} else {
+	akInfo := &utils.AKInfo{}
+	if len(c.accessKeyId) > 0 && len(c.accessKeySecret) > 0 {
+		akInfo.AccessKeyId = c.accessKeyId
+		akInfo.AccessKeySecret = c.accessKeySecret
+		akInfo.SecurityToken = ""
+	} else {
+		var err error
+		akInfo, err = utils.ParseAKInfoFromConfigPath()
+		if err != nil {
 			akInfoInMeta, err := utils.ParseAKInfoFromMeta()
 			if err != nil {
 				klog.Errorf("failed to get RamRoleToken,because of %v", err)
@@ -331,15 +331,17 @@ func getSLSEndpoint(region string, internal bool) string {
 	endpointFromEnv := os.Getenv("SLS_ENDPOINT")
 	if endpointFromEnv != "" {
 		finalEndpoint = endpointFromEnv
+		klog.Infof("sls endpoint from env, %v", finalEndpoint)
+		return finalEndpoint
 	}
 
 	if internal {
 		// vpc network
 		region = fmt.Sprintf("%s-intranet", region)
-		finalEndpoint = fmt.Sprintf("%s.%s", region, SLSDefaultEndpoint)
+		finalEndpoint = fmt.Sprintf("https://%s.%s", region, SLSDefaultEndpoint)
 	} else {
 		// public network
-		finalEndpoint = fmt.Sprintf("%s.%s", region, finalEndpoint)
+		finalEndpoint = fmt.Sprintf("https://%s.%s", region, finalEndpoint)
 	}
 	klog.Infof("sls endpoint, %v", finalEndpoint)
 	return finalEndpoint
